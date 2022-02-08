@@ -1,0 +1,31 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "plugins": [
+    "cypress",
+    "@typescript-eslint"
+  ],
+  "rules": {
+    "cypress/no-assigning-return-values": "error",
+    "cypress/assertion-before-screenshot": "warn",
+    "cypress/no-async-tests": "error",
+    "cypress/no-pause": "error",
+    "global-require": 0,
+    "no-plusplus": 0,
+    "class-methods-use-this": 0,
+    "@typescript-eslint/no-namespace": "off",
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-var-requires": 0,
+    "@typescript-eslint/ban-ts-comment": "off",
+    "semi": [2, "always"],
+    "@typescript-eslint/no-unused-vars": "off"
+  },
+  "env": {
+    "cypress/globals": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:@typescript-eslint/recommended"
+  ]
+}

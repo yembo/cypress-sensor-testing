@@ -1,0 +1,46 @@
+{
+  "name": "sensor",
+  "version": "1.0.0",
+  "description": "TCypress sensor testing",
+  "main": "index.html",
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/node": "^17.0.13",
+    "@types/react": "^17.0.38",
+    "@types/react-dom": "^17.0.11",
+    "@yembo/yemblocks-core": "^11.0.1",
+    "aws-amplify": "^4.3.13",
+    "dayjs": "^1.10.7",
+    "logrocket": "^2.1.3",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-error-boundary": "^3.1.4",
+    "react-query": "^3.34.12",
+    "react-router-dom": "^6.2.1",
+    "react-scripts": "5.0.0",
+    "sass": "^1.49.0",
+    "typescript": "^4.5.5"
+  },
+  "scripts": {
+    "start": "http-server",
+    "lint": "eslint \"{cypress}/**/*.{js,ts,jsx,tsx}\" && npx stylelint \"**/*.scss\"",
+    "cy:run": "node runTests.js local",
+    "cy:record": "node runTests.js local recordRequests",
+    "cy:open": "TZ=\"America/Los_Angeles\" cypress open --env '{\"browserPermissions\": {\"geolocation\": 1}}'",
+    "cy:open:IN": "TZ=\"Asia/Calcutta\" cypress open --env '{\"browserPermissions\": {\"geolocation\": 1}}'"
+  },
+  "devDependencies": {
+    "@types/dom-mediacapture-record": "^1.0.11",
+    "cypress": "^9.4.1",
+    "cypress-browser-permissions": "^1.1.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-cypress": "^2.12.1",
+    "eslint-plugin-react": "^7.28.0",
+    "eslint-plugin-react-hooks": "^4.3.0",
+    "stylelint": "^14.3.0",
+    "stylelint-config-sass-guidelines": "^9.0.1",
+    "stylelint-config-standard": "^24.0.0",
+    "stylelint-config-standard-scss": "^3.0.0"
+  }
+}
