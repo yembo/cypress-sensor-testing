@@ -138,7 +138,7 @@ describe('Sensor testing', () => {
                             
                             // Expect the UI to reflect in tandem with the changes to motion
                             if (acceptableStatuses.length > 1) {
-                                // If both statuses are acceptable, ust confirm the status is visible but don't check its value
+                                // If both statuses are acceptable, just confirm the status is visible but don't check its value
                                 cy.get('[id="sensor-status"]').should('be.visible');
                             }
                             // If the only acceptable motion status is "ok", then the UI should reflect that
