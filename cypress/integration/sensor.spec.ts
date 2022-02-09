@@ -2,7 +2,6 @@
 
 describe('Sensor testing', () => {
     it(`Should pass recorded motion event tests`, () => {
-
         // Return a human-readable string for motion classification
         const getMotionClassification = (isMotionOk) => {
             return isMotionOk ? 'ok' : 'not ok';
@@ -25,24 +24,6 @@ describe('Sensor testing', () => {
                 }
 
                 if ((timestamp >= expectation.start) && (timestamp <= expectation.end)) {
-                    let prevStart = '--';
-                    let prevEnd   = '--';
-
-                    if (prevExpectation) {
-                        prevStart = prevExpectation.start;
-                        prevEnd   = prevExpectation.end;
-                    }
-
-                    let nextStart = '--';
-                    let nextEnd   = '--';
-
-                    if (nextExpectation) {
-                        nextStart = nextExpectation.start;
-                        nextEnd   = nextExpectation.end;
-                    }
-
-                    cy.log(`prev: ${prevStart} to ${prevEnd}, curr: ${expectation.start} to ${expectation.end}, next: ${nextStart} to ${nextEnd}`);
-
                     // The expected motion classification for the timestamp is acceptable
                     acceptableStatuses.push(getMotionClassification(expectation.isMotionOk));
 
@@ -98,8 +79,8 @@ describe('Sensor testing', () => {
         cy.visit('/index.html');
         
         const recordingFiles = [
-            //"android-12-galaxy-s21-20s-all-good.json",
-            //"android-12-galaxy-s21-20s-all-bad.json",
+            "android-12-galaxy-s21-20s-all-good.json",
+            "android-12-galaxy-s21-20s-all-bad.json",
             "android-12-galaxy-s21-20s-bad-10-to-12s.json"          
         ];
 
@@ -113,8 +94,8 @@ describe('Sensor testing', () => {
             // Test each recording file one at a time
             cy.fixture(recordingFile).then((recording) => {
                 // Feed each data packet into the page one at a time
-                recording.data.forEach((packet) => {
-                    cy.window().then((window) => {
+                cy.window().then((window) => {
+                    recording.data.forEach((packet) => {
                         /* Since the algorithm may rely on wall clock time, actually wait the appropriate amount of
                          * time before feeding the next data point. Otherwise new Date().getTime() will be skewed. */
                         cy.wait(packet.interval).then(() => {
@@ -125,6 +106,7 @@ describe('Sensor testing', () => {
                                 interval: packet.interval,
                                 rotationRate: packet.rotationRate
                             };
+
                             const deviceMotionEvent = new DeviceMotionEvent("devicemotion", options);
 
                             const acceptableStatuses = getAcceptableMotionStatuses(packet.timestamp, recording);
@@ -135,7 +117,6 @@ describe('Sensor testing', () => {
                             // Pass the synthetic data into the window on the target page
                             // @ts-ignore
                             window.sensor.handleMotion(deviceMotionEvent);
-                            
                             // Expect the UI to reflect in tandem with the changes to motion
                             if (acceptableStatuses.length > 1) {
                                 // If both statuses are acceptable, just confirm the status is visible but don't check its value
