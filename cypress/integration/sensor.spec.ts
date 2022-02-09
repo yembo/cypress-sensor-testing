@@ -6,7 +6,7 @@ describe('Sensor testing', () => {
         // Return a human-readable string for motion classification
         const getMotionClassification = (isMotionOk) => {
             return isMotionOk ? 'ok' : 'not ok';
-        }
+        };
 
         // Determine what acceptable motion classifications are at a given point in time
         const getAcceptableMotionStatuses = (timestamp, recording) => {
@@ -20,13 +20,29 @@ describe('Sensor testing', () => {
 
                     /* If the motion classification is within the hysteresis window from the previous
                      * expectation, then also call the previous's window's expectation */
-                    if (prevExpectation && ((prevExpectation.end + recording.expectations.hysteresis) >= timestamp)) {
-                        const prevClassification = getMotionClassification(prevExpectation.isMotionOk);
-                        if (!acceptableStatuses.includes(prevClassification)) {
-                            acceptableStatuses.push(getMotionClassification(prevClassification));
+                    if (prevExpectation) {
+                        if ((prevExpectation.end + recording.expectations.hysteresis) >= timestamp) {
+                            const prevClassification = getMotionClassification(prevExpectation.isMotionOk);
+                            if (!acceptableStatuses.includes(prevClassification)) {
+                                acceptableStatuses.push(getMotionClassification(prevClassification));
+                            }
                         }
                     }
+                    // If there is no previous classification, allow hysteresis during start of test
+                    else {
+                        if (recording.expectations.hysteresis >= timestamp) {
+                            if (!acceptableStatuses.includes('ok')) {
+                                acceptableStatuses.push('ok');
+                            }
 
+                            if (!acceptableStatuses.includes('not ok')) {
+                                acceptableStatuses.push('not ok');
+                            }
+                        }
+                    }
+                    // Get hysteresis by looking into next expectation
+                    // TO DO
+                    
                     // No need to process further once the current timestamp has been located
                     break;
                 }
@@ -35,17 +51,15 @@ describe('Sensor testing', () => {
             }
 
             return acceptableStatuses;
-        }
+        };
 
         // Navigate to the page, click the button, and confirm the UI is responsive
         cy.visit('/index.html');
         
-        // Play back each recorded motion file and compare UI to expectations
-        const MS_PER_DATA_SAMPLE = 50;
-
         const recordingFiles = [
-           // "android-12-galaxy-s21-20s-all-good.json",
-            "android-12-galaxy-s21-20s-all-bad.json"
+            //"android-12-galaxy-s21-20s-all-good.json",
+            //"android-12-galaxy-s21-20s-all-bad.json",
+            "android-12-galaxy-s21-20s-bad-10-to-12s.json"          
         ];
 
         for (const recordingFile of recordingFiles) {
@@ -62,39 +76,39 @@ describe('Sensor testing', () => {
                     cy.window().then((window) => {
                         /* Since the algorithm may rely on wall clock time, actually wait the appropriate amount of
                          * time before feeding the next data point. Otherwise new Date().getTime() will be skewed. */
-                        cy.wait(MS_PER_DATA_SAMPLE);
+                        cy.wait(packet.interval).then(() => {
+                            // Build a synthetic DeviceMotionEvent from the recorded data
+                            const options = {
+                                acceleration: packet.acceleration,
+                                accelerationIncludingGravity: packet.accelerationIncludingGravity,
+                                interval: packet.interval,
+                                rotationRate: packet.rotationRate
+                            };
+                            const deviceMotionEvent = new DeviceMotionEvent("devicemotion", options);
 
-                        // Build a synthetic DeviceMotionEvent from the recorded data
-                        const options = {
-                            acceleration: packet.acceleration,
-                            accelerationIncludingGravity: packet.accelerationIncludingGravity,
-                            interval: MS_PER_DATA_SAMPLE,
-                            rotationRate: packet.rotationRate
-                        };
-                        const deviceMotionEvent = new DeviceMotionEvent("devicemotion", options);
+                            const acceptableStatuses = getAcceptableMotionStatuses(packet.timestamp, recording);
 
-                        const acceptableStatuses = getAcceptableMotionStatuses(packet.timestamp, recording);
+                            // Print a log line to make it easier to track where things went wrong if the test were to fail
+                            cy.log(`Processing packet @ ${packet.timestamp} ms, acceptable statuses: ${acceptableStatuses.join(', ')}`);
 
-                        // Print a log line to make it easier to track where things went wrong if the test were to fail
-                        cy.log(`Processing packet @ ${packet.timestamp} ms, acceptable statuses: ${acceptableStatuses.join(', ')}`);
-
-                        // Pass the synthetic data into the window on the target page
-                        // @ts-ignore
-                        window.sensor.handleMotion(deviceMotionEvent);
-                        
-                        // Expect the UI to reflect in tandem with the changes to motion
-                        if (acceptableStatuses.length > 1) {
-                            // If both statuses are acceptable, ust confirm the status is visible but don't check its value
-                            cy.get('[id="sensor-status"]').should('be.visible');
-                        }
-                        // If the only acceptable motion status is "ok", then the UI should reflect that
-                        else if (acceptableStatuses.includes('ok')) {
-                            cy.get('[id="sensor-status"]').should('include.text','Speed ok');
-                        }
-                        // If the only acceptable motion status is "not ok", then the UI should reflect that
-                        else if (acceptableStatuses.includes('not ok')) {
-                            cy.get('[id="sensor-status"]').should('include.text','Slow down, partner');
-                        }
+                            // Pass the synthetic data into the window on the target page
+                            // @ts-ignore
+                            window.sensor.handleMotion(deviceMotionEvent);
+                            
+                            // Expect the UI to reflect in tandem with the changes to motion
+                            if (acceptableStatuses.length > 1) {
+                                // If both statuses are acceptable, ust confirm the status is visible but don't check its value
+                                cy.get('[id="sensor-status"]').should('be.visible');
+                            }
+                            // If the only acceptable motion status is "ok", then the UI should reflect that
+                            else if (acceptableStatuses.includes('ok')) {
+                                cy.get('[id="sensor-status"]').should('include.text','Speed ok');
+                            }
+                            // If the only acceptable motion status is "not ok", then the UI should reflect that
+                            else if (acceptableStatuses.includes('not ok')) {
+                                cy.get('[id="sensor-status"]').should('include.text','Slow down, partner');
+                            }
+                        });
                     });
                 });
             });
