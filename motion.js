@@ -13,7 +13,7 @@ const sensor = {
 
     /* Consider the reading to be "bad" if this many consecutive events are bad.
      * This smooths out spurious/noisy samples */
-    BAD_MOTION_CONSECUTIVE_THRESHOLD: 15,
+    BAD_MOTION_CONSECUTIVE_THRESHOLD: 1,
 
     attachEventHandlers: () => {
         sensor.dom.$sensorControl = document.getElementById("sensor-control");
@@ -76,7 +76,7 @@ const sensor = {
 
     isMotionOk: (event) => {
         let isAccelerationOk = true;
-        let isRotationOk = true;
+        let isRotationOk     = true;
 
         // Rotation around each axis cannot be too fast
         const {alpha, beta, gamma} = event.rotationRate ?? {};
