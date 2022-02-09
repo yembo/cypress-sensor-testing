@@ -11,26 +11,57 @@ describe('Sensor testing', () => {
         // Determine what acceptable motion classifications are at a given point in time
         const getAcceptableMotionStatuses = (timestamp, recording) => {
             const acceptableStatuses = [];
-            let prevExpectation      = null;
+            for (let i = 0; i < recording.expectations.timeline.length; i++) {
+                let prevExpectation = null;
+                const expectation = recording.expectations.timeline[i];
+                let nextExpectation = null;
 
-            for (const expectation of recording.expectations.timeline) {
+                if (i > 0) {
+                    prevExpectation = recording.expectations.timeline[i - 1];
+                }
+
+                if (i < (recording.expectations.timeline.length - 1)) {
+                    nextExpectation = recording.expectations.timeline[i + 1];
+                }
+
                 if ((timestamp >= expectation.start) && (timestamp <= expectation.end)) {
+                    let prevStart = '--';
+                    let prevEnd   = '--';
+
+                    if (prevExpectation) {
+                        prevStart = prevExpectation.start;
+                        prevEnd   = prevExpectation.end;
+                    }
+
+                    let nextStart = '--';
+                    let nextEnd   = '--';
+
+                    if (nextExpectation) {
+                        nextStart = nextExpectation.start;
+                        nextEnd   = nextExpectation.end;
+                    }
+
+                    cy.log(`prev: ${prevStart} to ${prevEnd}, curr: ${expectation.start} to ${expectation.end}, next: ${nextStart} to ${nextEnd}`);
+
                     // The expected motion classification for the timestamp is acceptable
                     acceptableStatuses.push(getMotionClassification(expectation.isMotionOk));
 
                     /* If the motion classification is within the hysteresis window from the previous
-                     * expectation, then also call the previous's window's expectation */
+                     * expectation, then also consider the previous's window's expectation */
                     if (prevExpectation) {
                         if ((prevExpectation.end + recording.expectations.hysteresis) >= timestamp) {
+                            cy.log('Also allowing hysteresis from prev expectation');
+
                             const prevClassification = getMotionClassification(prevExpectation.isMotionOk);
                             if (!acceptableStatuses.includes(prevClassification)) {
-                                acceptableStatuses.push(getMotionClassification(prevClassification));
+                                acceptableStatuses.push(prevClassification);
                             }
                         }
                     }
-                    // If there is no previous classification, allow hysteresis during start of test
-                    else {
+                    else { // If there is no previous classification, allow hysteresis during start of test
                         if (recording.expectations.hysteresis >= timestamp) {
+                            cy.log('Allowing hysteresis at start of test');
+
                             if (!acceptableStatuses.includes('ok')) {
                                 acceptableStatuses.push('ok');
                             }
@@ -40,9 +71,19 @@ describe('Sensor testing', () => {
                             }
                         }
                     }
-                    // Get hysteresis by looking into next expectation
-                    // TO DO
-                    
+
+                    /* If the motion classification is within the hysteresis window from the next
+                     * expectation, then also consider the next's window's expectation */
+                    if (nextExpectation) {
+                        if ((nextExpectation.start - recording.expectations.hysteresis) <= timestamp) {
+                            cy.log('Also allowing hysteresis from next expectation');
+                            const nextClassification = getMotionClassification(nextExpectation.isMotionOk);
+                            if (!acceptableStatuses.includes(nextClassification)) {
+                                acceptableStatuses.push(nextClassification);
+                            }
+                        }
+                    }
+
                     // No need to process further once the current timestamp has been located
                     break;
                 }

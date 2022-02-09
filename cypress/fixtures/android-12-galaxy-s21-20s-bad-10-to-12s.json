@@ -4,13 +4,13 @@
         "timeline": [
             {
                 "start": 0,
-                "end": 20008,
+                "end": 10000,
                 "isMotionOk": true
             },
             {
                 "start": 10000,
                 "end": 12000,
-                "isMotionOk": true
+                "isMotionOk": false
             },
             {
                 "start": 12000,
