@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en-us">
 <head>
-    <title>Yembo Sensor Testing</title>
+    <title>Yembo Sensor Data Collector</title>
 
     <!-- Make page show up ok on mobile devices -->
     <meta charset="utf-8"/>
@@ -126,12 +126,20 @@
             font-family: Montserrat, sans-serif;
             cursor: pointer;
         }
+
+        textarea#log {
+            min-width: 60vw;
+            min-height: 40vh;
+            display: block;
+        }
     </style>
     <script>
         const sensor = {
             dom: {},
             status: 'unknown',
             statusText: null,
+            startTime: 0,
+            payload: {},
 
             // Log buffer for displaying most recent entries in the UI
             log: [],
@@ -143,7 +151,7 @@
 
             /* Consider the reading to be "bad" if this many consecutive events are bad.
             * This smooths out spurious/noisy samples */
-            BAD_MOTION_CONSECUTIVE_THRESHOLD: 15,
+            BAD_MOTION_CONSECUTIVE_THRESHOLD: 1,
 
             attachEventHandlers: () => {
                 sensor.dom.$sensorControl = document.getElementById("sensor-control");
@@ -151,11 +159,16 @@
                 sensor.dom.$logWrapper = document.getElementById("log-wrapper");
                 sensor.dom.$log = document.getElementById("log");
 
+                sensor.dom.$log.onclick = (e) => {
+                    sensor.dom.$log.focus();
+                    sensor.dom.$log.select();
+                };
+
                 // Button either starts or stops analysis, depending on state
                 sensor.dom.$sensorControl.onclick = (e) => {
                     switch (sensor.status) {
-                        case 'analyzing':
-                            sensor.stopAnalysis();
+                        case 'collecting':
+                            sensor.stopCollection();
                             break;
                         case 'unknown':
                         default:
@@ -167,13 +180,30 @@
 
             // Update UI and start analyzing sensor data
             onPermissionGranted: () => {
-                sensor.status = 'analyzing';
+                sensor.status = 'collecting';
 
                 sensor.dom.$sensorStatus.className = 'success';
-                sensor.dom.$sensorStatus.innerText = '📊 Analyzing data...';
+                sensor.dom.$sensorStatus.innerText = '📊 Collecting data...';
 
-                sensor.dom.$sensorControl.innerText = 'Stop Analyzing';
+                sensor.dom.$sensorControl.innerText = 'Stop Collecting';
 
+                sensor.payload = {
+                    "expectations": {
+                        "hysteresis": 0,
+                       "timeline": [
+                            {
+                                "start": 0,
+                                "end": 10000,
+                                "isMotionOk": true
+                            }
+                        ]
+                    },
+                    "data": [
+
+                    ]
+                };
+
+                sensor.startTime = new Date().getTime();
                 sensor.requestMotionData();
             },
 
@@ -236,35 +266,36 @@
                 return (sensor.numConsecutiveBadMotionCounts < sensor.BAD_MOTION_CONSECUTIVE_THRESHOLD);
             },
 
+            now: () => {
+                return (new Date().getTime() - sensor.startTime);
+            },
+
             handleMotion: (event) => {
-                const isMotionOk = sensor.isMotionOk(event);
+                const packet = {};
 
-                const now = new Date().toISOString();
-                const x = event.acceleration.x;
-                const y = event.acceleration.y;
-                const z = event.acceleration.z;
-                const alpha = event.rotationRate.alpha;
-                const beta = event.rotationRate.beta;
-                const gamma = event.rotationRate.gamma;
-                const result = isMotionOk ? 'ok' : 'too fast';
+                packet.timestamp = sensor.now();
 
-                const logPacket = `timestamp: ${now}\n\tx: ${x}\n\ty: ${y}\n\tz: ${z}\n\tα: ${alpha}\n\tβ: ${beta}\n\tγ: ${gamma}\n\tresult: ${result}\n`;
+                packet.interval = event.interval;
 
-                // Treat log as a circular buffer, otherwise text will get way too long and page will hang
-                sensor.log.unshift(logPacket);
-                if (sensor.log.length > sensor.MAX_LOG_LENGTH) {
-                    sensor.log.pop();
-                }
+                packet.acceleration = {
+                    x: event.acceleration.x,
+                    y: event.acceleration.y,
+                    z: event.acceleration.z
+                };
 
-                // Update UI to reflect motion analysis status
-                sensor.dom.$log.innerText = sensor.log.join("\n");
-                if (isMotionOk) {
-                    sensor.dom.$sensorStatus.className = 'success';
-                    sensor.dom.$sensorStatus.innerText = '✅ Speed ok';
-                } else {
-                    sensor.dom.$sensorStatus.className = 'warning';
-                    sensor.dom.$sensorStatus.innerText = '🐌 Slow down, partner';
-                }
+                packet.accelerationIncludingGravity = {
+                    x: event.accelerationIncludingGravity.x,
+                    y: event.accelerationIncludingGravity.y,
+                    z: event.accelerationIncludingGravity.z
+                };
+
+                packet.rotationRate = {
+                    alpha: event.rotationRate.alpha,
+                    beta:  event.rotationRate.beta,
+                    gamma: event.rotationRate.gamma
+                };
+
+                sensor.payload.data.push(packet);
             },
 
             handlePermissions: () => {
@@ -288,14 +319,16 @@
             },
 
             // Stop collecting and analyzing data, and update UI to reflect the change
-            stopAnalysis: () => {
+            stopCollection: () => {
                 sensor.status = 'completed';
 
                 sensor.dom.$sensorStatus.className = 'inactive';
-                sensor.dom.$sensorStatus.innerText = '😴 Analysis inactive';
+                sensor.dom.$sensorStatus.innerText = '😴 Collection inactive';
 
-                sensor.dom.$sensorControl.innerText = 'Start Analyzing';
+                sensor.dom.$sensorControl.innerText = 'Start Collecting';
                 window.removeEventListener('devicemotion', sensor.handleMotion);
+
+                sensor.dom.$log.innerText = JSON.stringify(sensor.payload);
             },
 
         };
@@ -309,18 +342,18 @@
 <body>
 <div class="content-container">
     <div class="item-wrapper" id="title-wrapper">
-        <button id="sensor-control">Start Analyzing</button>
+        <button id="sensor-control">Start Collecting</button>
     </div>
 
     <div class="item-wrapper" id="sensor-wrapper">
         <div id="sensor-status" class="inactive">
-            😴 Analysis inactive
+            😴 Collection inactive
         </div>
     </div>
 
     <div class="item-wrapper" id="log-wrapper">
         <h3>Log</h3>
-        <pre id="log"></pre>
+        <textarea id="log"></textarea>
     </div>
 </div>
 </body>
