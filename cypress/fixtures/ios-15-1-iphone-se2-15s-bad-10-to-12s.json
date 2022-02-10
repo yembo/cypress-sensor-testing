@@ -9,11 +9,11 @@
         },
         {
           "start": 10000,
-          "end": 12000,
+          "end": 12500,
           "isMotionOk": false
         },
         {
-          "start": 12000,
+          "start": 12500,
           "end": 16000,
           "isMotionOk": true
         }
